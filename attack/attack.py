@@ -14,6 +14,7 @@ import os
 # from matplotlib import pyplot as plt
 
 
+# 攻击
 mnist_attack_data_base_path = '../data/mnist/'
 cifar_attack_data_base_path = '../data/cifar/'
 
@@ -55,26 +56,35 @@ def start_attack(foolmodel, image, label):
         # 返回生成的攻击样本，用于保存
 
 
+# 模型保存的位置 以及 对抗样本保存的位置
+def process_attack(test_datas, model_path, save_path):
+    advs = []
+    model = load_model(model_path)
+    foolmodel = foolbox.models.KerasModel(model, bounds=(0, 1), preprocessing=(0, 1))
+    predict_labels = model.predict(test_datas)
+    # 找到模型预测的结果
+    predict_result = np.argmax(predict_labels, axis=1)
+    # 找到测试集预测的结果
+    test_result = np.argmax(test_labels, axis=1)
+    for j in range(len(test_datas)):
+        print(j)
+        # 对那些成功的样本进行对抗样本的生成
+        if predict_result[j] == test_result[j]:
+            adv = start_attack(foolmodel, test_datas[j], test_result[j])
+            if adv is not None:
+                advs.append(adv)
+    if not os.path.exists(save_path):
+        os.makedirs(save_path)
+    np.save(os.path.join(save_path, str(i) + '_hidden_layers_model_attack_datas.npy'), advs)
+
+
 if __name__ == '__main__':
     keras.backend.set_learning_phase(0)
     train_datas, train_labels, test_datas, test_labels = data_provider.get_mnist_data()
     for i in [3, 5, 10]:
-        advs = []
-        model = load_model('../model/mnist/mnist_' + str(i) + '_hidden_layers_model.hdf5')
-        foolmodel = foolbox.models.KerasModel(model, bounds=(0, 1), preprocessing=(0, 1))
-        predict_labels = model.predict(test_datas)
-        # 找到模型预测的结果
-        predict_result = np.argmax(predict_labels, axis=1)
-        # 找到测试集预测的结果
-        test_result = np.argmax(test_labels, axis=1)
-        for j in range(len(test_datas)):
-            print(j)
-            # 对那些成功的样本进行对抗样本的生成
-            if predict_result[j] == test_result[j]:
-                adv = start_attack(foolmodel, test_datas[j], test_result[j])
-                if adv is not None:
-                    advs.append(adv)
-        save_path = os.path.join(mnist_attack_data_base_path, 'mnist_attack_data/')
-        if not os.path.exists(save_path):
-            os.makedirs(save_path)
-        np.save(os.path.join(save_path, str(i) + '_hidden_layers_model_attack_datas.npy'), advs)
+        # 模型保存的位置
+        model_path = '../model/mnist/mnist_' + str(i) + '_hidden_layers_model.hdf5'
+        # 对抗样本应该保存的位置
+        attack_save_path = os.path.join(mnist_attack_data_base_path, 'mnist_attack_data/')
+        # 调用根据测试集合数据生成对抗样本的方法
+        process_attack(test_datas, model_path, attack_save_path)
