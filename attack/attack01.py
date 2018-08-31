@@ -69,7 +69,7 @@ def start_attack_saliency(foolmodel, image, label):
     #     adv = attack(image, label, unpack=True, theta=theta)
     #     if adv is not None and cal_score(image, adv) >= threshold:
     #         return adv
-    adv = attack(image, label, unpack=True, theta=0.1)
+    adv = attack(image, label, unpack=True, theta=0.7)
     if adv is not None and cal_score(image, adv) >= threshold:
         return adv
     # 返回生成的攻击样本，用于保存
@@ -83,7 +83,7 @@ def start_attack_fgsm(foolmodel, image, label):
     #     adv = attack(image, label, unpack=True, theta=theta)
     #     if adv is not None and cal_score(image, adv) >= threshold:
     #         return adv
-    adv = attack(image, label, unpack=True, epsilons=100)
+    adv = attack(image, label, unpack=True, epsilons=50)
     if adv is not None and cal_score(image, adv) >= threshold:
         return adv
     # 返回生成的攻击样本，用于保存
@@ -97,7 +97,7 @@ def start_attack_gaussian_noise(foolmodel, image, label):
     #     adv = attack(image, label, unpack=True, theta=theta)
     #     if adv is not None and cal_score(image, adv) >= threshold:
     #         return adv
-    adv = attack(image, label, unpack=True, epsilons=100)
+    adv = attack(image, label, unpack=True, epsilons=50)
     if adv is not None and cal_score(image, adv) >= threshold:
         return adv
     # 返回生成的攻击样本，用于保存
@@ -110,7 +110,7 @@ def start_attack_uniform_noise(foolmodel, image, label):
     #     adv = attack(image, label, unpack=True, theta=theta)
     #     if adv is not None and cal_score(image, adv) >= threshold:
     #         return adv
-    adv = attack(image, label, unpack=True, epsilons=100)
+    adv = attack(image, label, unpack=True, epsilons=50)
     if adv is not None and cal_score(image, adv) >= threshold:
         return adv
     # 返回生成的攻击样本，用于保存
@@ -161,10 +161,10 @@ if __name__ == '__main__':
     for i in [3, 5, 10]:
         # 模型保存的位置
         model_path = '../model/mnist/mnist_' + str(i) + '_hidden_layers_model.hdf5'
-        # attack_save_path = os.path.join(mnist_attack_data_base_path, 'mnist_attack_data/saliency_map/')
-        # attack_save_path = os.path.join(mnist_attack_data_base_path, 'mnist_attack_data/fgsm/')
-        # attack_save_path = os.path.join(mnist_attack_data_base_path, 'mnist_attack_data/gaussian_noise/')
-        attack_save_path = os.path.join(mnist_attack_data_base_path, 'mnist_attack_data/uniform_noise/')
+        # attack_save_path = os.path.join(mnist_attack_data_base_path, 'mnist_attack_data/saliency_map01/')
+        # attack_save_path = os.path.join(mnist_attack_data_base_path, 'mnist_attack_data/fgsm01/')
+        # attack_save_path = os.path.join(mnist_attack_data_base_path, 'mnist_attack_data/gaussian_noise01/')
+        attack_save_path = os.path.join(mnist_attack_data_base_path, 'mnist_attack_data/uniform_noise01/')
         for class_index in range(classes):
             test_datas = data_provider.get_class_test_data('../data/mnist', 'mnist', class_index)
             # test_labels = np.zeros(shape=(len(test_datas), classes))

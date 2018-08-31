@@ -11,7 +11,17 @@ from model_arch import ModelArch
 import data_provider
 
 import config
+import tensorflow as tf
+import keras.backend.tensorflow_backend as KTF
 
+os.environ["CUDA_VISIBLE_DEVICES"] = '0'
+# 进行配置，使用30%的GPU
+gpu_config = tf.ConfigProto()
+gpu_config.gpu_options.per_process_gpu_memory_fraction = 0.2
+session = tf.Session(config=gpu_config)
+
+# 设置session
+KTF.set_session(session)
 
 def model_train_process(model_arch, train_images, train_labels, test_images, test_labels, batch_size=256,
                         epochs=10):

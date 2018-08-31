@@ -12,8 +12,11 @@ import matplotlib.pyplot as plt
 import time
 import gc
 
+# 默认的模式只能在windows下使用,改成通用的Agg
+# mpl.use('Agg')
 '''
 计算样本的覆盖率
+试验1代码 测试all wrong 和attack
 '''
 
 
@@ -106,76 +109,62 @@ def get_total_size(combine_nums, type, m, n):
 
 
 if __name__ == '__main__':
-    # combination = combinations(range(50), 2)
-    # print(combination)
-    # # print(len(list(combination)))
-    # for item in combination:
-    #     print(item)
-    # data = np.array(range(10))
-    # print(data)
-    # print(cal_2_to_10_value([1, 1, 0, 1]))
-    # data = [[1, 2, 3], [2, 3, 4]]
-    # print(np.sum(data, axis=0))
-    # print(np.sum(data, axis=1))
     threshold = 0
     m = 1
     n = 1
-    # samples 的数量选取2000个有些多，只选取500张
-    sample_nums = 500
-    labels = list(range(1, sample_nums + 1))
-    times = 5
-    for t in range(times):
-        for i in [3, 5, 10]:
-            for type in [0, 1, 2]:
-                for attack_type in ['fgsm', 'gaussian_noise', 'saliency_map', 'uniform_noise', 'all']:
-                    now = time.time()
-                    print(i)
-                    plt.figure
-                    datas = data_provider.get_all_active_data_with_attack_type('../data/mnist/', 'mnist', i,
-                                                                               attack_type)
-                    datas = data_provider.shuffle_mnist_data(datas)
-                    datas = np.array(random.sample(list(datas), sample_nums))
-                    total_data = []
-                    process_data = []
-                    layers = []
-                    for j in range(i - 1):
-                        datas1 = np.array([list(item) for item in datas[:, j]])
-                        datas2 = np.array([list(item) for item in datas[:, j + 1]])
-                        print(datas1.shape)
-                        print(datas2.shape)
-                        datas1[datas1 > threshold] = 1
-                        datas2[datas2 > threshold] = 1
-                        datas1[datas1 <= threshold] = 0
-                        datas2[datas2 <= threshold] = 0
-                        total_comb_num, coverage_data = two_layer(m, n, datas1, datas2, type=type)
-                        total_size = get_total_size(total_comb_num, type, m, n)
-                        total_data.append(total_size)
-                        process_data.append(coverage_data)
-                        layers.append([j, j + 1])
-                        # 添加j,j+1层激活数据的情况
-                        plt.plot(labels, coverage_data / total_size, label=str(j) + '_' + str(j + 1))
-                        del datas1
-                        del datas2
-                        gc.collect()
-                    plt.plot(labels, np.sum(process_data, axis=0) / np.sum(total_data), label='total')
-                    # 过程数据 两千列, layer数据 目前是相邻两层 , total_data在这两层对应的覆盖情况总数
-                    data_path = '../data/mnist/coverage/exp2/threshold' + str(
-                        threshold) + '/' + str(sample_nums) + '/' + attack_type + '/type' + str(
-                        type) + '/' + 'adjacent_' + str(m) + '_' + str(
-                        n) + '/' + str(i) + '_hidden_layers_model'
-                    if not os.path.exists(data_path):
-                        os.makedirs(data_path)
-                    np.save(os.path.join(data_path, str(t) + '.npy'),
-                            [process_data, layers, total_data])
-                    # 消耗的时间
-                    print(str(time.time() - now) + ' s')
-                    plt.legend(loc='best')
-                    # plt.savefig(str(i) + '_hidden_layer_mnist_model.jpg')
-                    plt.savefig(os.path.join(data_path, str(t) + '.jpg'))
-                    plt.ion()
-                    # plt.pause(1)
-                    plt.close()
-                    del datas
-                    del process_data
-                    del total_data
-                    gc.collect()
+    for type in [0, 1, 2]:
+        for layer_num in [3, 5, 10]:
+            now = time.time()
+            print(str(layer_num) + ' hidden layers model process type' + str(type) + '...right...')
+            plt.figure
+            datas = data_provider.get_right_active_data('../data/mnist/', 'mnist', layer_num)
+            datas = data_provider.shuffle_mnist_data(datas)
+            total_data = []
+            process_data = []
+            layers = []
+            for j in range(layer_num - 1):
+                datas1 = np.array([list(item) for item in datas[:, j]])
+                datas2 = np.array([list(item) for item in datas[:, j + 1]])
+                # print(datas1.shape)
+                # print(datas2.shape)
+                datas1[datas1 > threshold] = 1
+                datas2[datas2 > threshold] = 1
+                datas1[datas1 <= threshold] = 0
+                datas2[datas2 <= threshold] = 0
+                # print(datas1.shape)
+                # print(datas2.shape)
+                total_comb_num, coverage_data = two_layer(m, n, datas1, datas2, type=type)
+                total_size = get_total_size(total_comb_num, type, m, n)
+                total_data.append(total_size)
+                process_data.append(coverage_data)
+                layers.append([j, j + 1])
+                # 添加j,j+1层激活数据的情况
+                coverage_rate = coverage_data / total_size
+                plt.plot(range(1, len(datas) + 1), coverage_data / total_size, label=str(j) + '_' + str(j + 1))
+                print('第' + str(j) + '-' + str(j + 1) + '层最终覆盖率:' + str(coverage_rate[-1]))
+                del datas1
+                del datas2
+                gc.collect()
+            total_rate = np.sum(process_data, axis=0) / np.sum(total_data)
+            plt.plot(range(1, len(datas) + 1), total_rate, label='total')
+            print('综合的边覆盖是:' + str(total_rate[-1]))
+            # 过程数据 两千列, layer数据 目前是相邻两层 , total_data在这两层对应的覆盖情况总数
+            data_path = '../data/mnist/coverage/' + 'adjacent_' + str(
+                m) + '_' + str(n) + '/type' + str(type) + '/right/'
+            if not os.path.exists(data_path):
+                os.makedirs(data_path)
+            np.save(os.path.join(data_path, str(layer_num) + '_hidden_layers_coverage_data.npy'),
+                    [process_data, layers, total_data])
+            # 消耗的时间
+            print(str(time.time() - now) + ' s')
+            plt.legend(loc='best')
+            plt.savefig(os.path.join(data_path, str(layer_num) + '_hidden_layer_mnist_model_for_right.jpg'))
+            plt.ion()
+            # plt.pause(1)
+            plt.close()
+            del datas
+            del process_data
+            del total_data
+            gc.collect()
+
+
