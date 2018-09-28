@@ -113,11 +113,12 @@ def check_dir(dir_path):
 
 
 if __name__ == '__main__':
-    threshold = 0
+    # threshold = 0
+    percentile = 0
     m = 1
     n = 1
     # 将几种阈值都尝试一遍
-    for threshold in [0, 0.25, 0.5, 0.75, 1.0]:
+    for percentile in [25, 50, 75]:
         for type in [0, 1, 2]:
             for layer_num in [3, 5, 10]:
                 result = {"model": str(layer_num) + '_hidden_layers_model.hdf5', "type": type, 'data_type': 'right'}
@@ -125,7 +126,7 @@ if __name__ == '__main__':
                 result_process_data = {}
                 # 隔离出来的保存rq1的目录
                 result_path = '../result/rq1/right/' + str(layer_num) + '_hidden_layers_model/adjacent_' + str(
-                    m) + '_' + str(n) + '_threshold_' + str(threshold) + '/type' + str(type)
+                    m) + '_' + str(n) + '_percentile_' + str(percentile) + '/type' + str(type)
                 check_dir(result_path)
                 now = time.time()
                 print(str(layer_num) + ' hidden layers model process type' + str(type) + '...right...')
@@ -140,10 +141,12 @@ if __name__ == '__main__':
                     datas2 = np.array([list(item) for item in datas[:, j + 1]])
                     # print(datas1.shape)
                     # print(datas2.shape)
-                    datas1[datas1 > threshold] = 1
-                    datas2[datas2 > threshold] = 1
-                    datas1[datas1 <= threshold] = 0
-                    datas2[datas2 <= threshold] = 0
+                    threshold1 = np.percentile(datas1, percentile)
+                    threshold2 = np.percentile(datas2, percentile)
+                    datas1[datas1 > threshold1] = 1
+                    datas2[datas2 > threshold2] = 1
+                    datas1[datas1 <= threshold1] = 0
+                    datas2[datas2 <= threshold2] = 0
                     # print(datas1.shape)
                     # print(datas2.shape)
                     total_comb_num, coverage_data = two_layer(m, n, datas1, datas2, type=type)
@@ -168,7 +171,7 @@ if __name__ == '__main__':
                 result['coverage_result'] = result_coverage_data
                 # 过程数据 两千列, layer数据 目前是相邻两层 , total_data在这两层对应的覆盖情况总数
                 data_path = '../data/mnist/coverage/' + 'adjacent_' + str(
-                    m) + '_threshold' + str(threshold) + str(n) + '/type' + str(type) + '/right/'
+                    m) + '_percentile' + str(percentile) + str(n) + '/type' + str(type) + '/right/'
                 if not os.path.exists(data_path):
                     os.makedirs(data_path)
                 np.save(os.path.join(data_path, str(layer_num) + '_hidden_layers_coverage_data.npy'),

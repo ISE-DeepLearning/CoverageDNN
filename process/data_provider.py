@@ -64,6 +64,13 @@ def get_wrong_active_data(base_dir, dataset, hidden_layer_num):
 
 
 def get_wrong_active_data_with_attack_type(base_dir, dataset, hidden_layer_num, type='fgsm'):
+    if type == 'all':
+        datas = []
+        for type in ['fgsm', 'gaussian_noise', 'saliency_map', 'uniform_noise']:
+            wrong_active_path = os.path.join(base_dir, dataset + '_wrong_active_data', type,
+                                             str(hidden_layer_num) + '_hidden_layers_active_data.npy')
+            datas.append(np.load(wrong_active_path))
+        return np.concatenate(datas, axis=0)
     wrong_active_path = os.path.join(base_dir, dataset + '_wrong_active_data', type,
                                      str(hidden_layer_num) + '_hidden_layers_active_data.npy')
     wrong_active_data = np.load(wrong_active_path)

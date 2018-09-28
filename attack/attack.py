@@ -13,22 +13,24 @@ import os
 import gc
 
 import tensorflow as tf
-import keras.backend.tensorflow_backend as KTF
+from keras import backend as K
 
-os.environ["CUDA_VISIBLE_DEVICES"] = '0'
-# 进行配置，使用30%的GPU
-gpu_config = tf.ConfigProto()
-gpu_config.gpu_options.per_process_gpu_memory_fraction = 0.2
-session = tf.Session(config=gpu_config)
+num_cores = 4
+GPU = False
+CPU = True
+if GPU:
+    num_GPU = 1
+    num_CPU = 1
+if CPU:
+    num_CPU = 1
+    num_GPU = 0
 
-# 设置session
-KTF.set_session(session)
-# import matplotlib
-# import math
-#
-# matplotlib.use('Agg')
-# from matplotlib import pyplot as plt
-
+config = tf.ConfigProto(intra_op_parallelism_threads=num_cores,
+                        inter_op_parallelism_threads=num_cores, allow_soft_placement=True,
+                        device_count={'CPU': num_CPU, 'GPU': num_GPU})
+config.gpu_options.per_process_gpu_memory_fraction = 0.2
+session = tf.Session(config=config)
+K.set_session(session)
 
 # 攻击
 mnist_attack_data_base_path = '../data/mnist/'
@@ -64,7 +66,7 @@ def cal_score(original_data, compose_data):
 # 攻击函数
 def start_attack_saliency(foolmodel, image, label):
     attack = foolbox.attacks.SaliencyMapAttack(foolmodel)
-    image = np.array(image).flatten()
+    # image = np.array(image).flatten()
     # for theta in np.arange(0.1, 1, 0.1):
     #     adv = attack(image, label, unpack=True, theta=theta)
     #     if adv is not None and cal_score(image, adv) >= threshold:
@@ -78,7 +80,7 @@ def start_attack_saliency(foolmodel, image, label):
 # 攻击函数
 def start_attack_fgsm(foolmodel, image, label):
     attack = foolbox.attacks.FGSM(foolmodel)
-    image = np.array(image).flatten()
+    # image = np.array(image).flatten()
     # for theta in np.arange(0.1, 1, 0.1):
     #     adv = attack(image, label, unpack=True, theta=theta)
     #     if adv is not None and cal_score(image, adv) >= threshold:
@@ -92,7 +94,7 @@ def start_attack_fgsm(foolmodel, image, label):
 # 攻击函数
 def start_attack_gaussian_noise(foolmodel, image, label):
     attack = foolbox.attacks.AdditiveGaussianNoiseAttack(foolmodel)
-    image = np.array(image).flatten()
+    # image = np.array(image).flatten()
     # for theta in np.arange(0.1, 1, 0.1):
     #     adv = attack(image, label, unpack=True, theta=theta)
     #     if adv is not None and cal_score(image, adv) >= threshold:
@@ -105,7 +107,7 @@ def start_attack_gaussian_noise(foolmodel, image, label):
 
 def start_attack_uniform_noise(foolmodel, image, label):
     attack = foolbox.attacks.AdditiveUniformNoiseAttack(foolmodel)
-    image = np.array(image).flatten()
+    # image = np.array(image).flatten()
     # for theta in np.arange(0.1, 1, 0.1):
     #     adv = attack(image, label, unpack=True, theta=theta)
     #     if adv is not None and cal_score(image, adv) >= threshold:
@@ -147,9 +149,41 @@ def process_attack(test_datas, class_index, model_path, save_path):
     gc.collect()
 
 
+# 模型保存的位置 以及 对抗样本保存的位置
+def process_attack_lenet5(test_datas, class_index, model_path, save_path):
+    advs = []
+    model = load_model(model_path)
+    foolmodel = foolbox.models.KerasModel(model, bounds=(0, 1), preprocessing=(0, 1))
+    predict_labels = model.predict(test_datas)
+    # 找到模型预测的结果
+    predict_result = np.argmax(predict_labels, axis=1)
+    # 找到测试集预测的结果
+    # test_result = np.argmax(test_labels, axis=1)
+    test_result = np.zeros(shape=(len(test_datas),))
+    test_result[:] = class_index
+    print('test result is ' + str(test_result[0]))
+    for j in range(len(test_datas)):
+        print(j)
+        # 对那些成功的样本进行对抗样本的生成
+        if predict_result[j] == test_result[j]:
+            # adv = start_attack_saliency(foolmodel, test_datas[j], test_result[j])
+            # adv = start_attack_fgsm(foolmodel, test_datas[j], test_result[j])
+            # adv = start_attack_gaussian_noise(foolmodel, test_datas[j], test_result[j])
+            adv = start_attack_uniform_noise(foolmodel, test_datas[j], test_result[j])
+            if adv is not None:
+                advs.append(adv)
+    if not os.path.exists(save_path):
+        os.makedirs(save_path)
+    np.save(os.path.join(save_path, 'lenet5_attack_' + str(class_index) + '_datas.npy'), advs)
+    del advs
+    del test_result
+    gc.collect()
+
+
 if __name__ == '__main__':
     keras.backend.set_learning_phase(0)
     classes = 10
+    i = 0
     # train_datas, train_labels, test_datas, test_labels = data_provider.get_mnist_data()
     # for i in [3, 5, 10]:
     #     # 模型保存的位置
@@ -158,18 +192,35 @@ if __name__ == '__main__':
     #     attack_save_path = os.path.join(mnist_attack_data_base_path, 'mnist_attack_data/')
     #     # 调用根据测试集合数据生成对抗样本的方法
     #     process_attack(test_datas, model_path, attack_save_path)
-    for i in [3, 5, 10]:
-        # 模型保存的位置
-        model_path = '../model/mnist/mnist_' + str(i) + '_hidden_layers_model.hdf5'
-        # attack_save_path = os.path.join(mnist_attack_data_base_path, 'mnist_attack_data/saliency_map/')
-        # attack_save_path = os.path.join(mnist_attack_data_base_path, 'mnist_attack_data/fgsm/')
-        # attack_save_path = os.path.join(mnist_attack_data_base_path, 'mnist_attack_data/gaussian_noise/')
-        attack_save_path = os.path.join(mnist_attack_data_base_path, 'mnist_attack_data/uniform_noise/')
-        for class_index in range(classes):
-            test_datas = data_provider.get_class_test_data('../data/mnist', 'mnist', class_index)
-            # test_labels = np.zeros(shape=(len(test_datas), classes))
-            # test_labels[:, class_index] = 1
-            process_attack(test_datas, class_index, model_path, attack_save_path)
-            # del test_labels
-            del test_datas
-            gc.collect()
+
+    # for i in [3, 5, 10]:
+    #     # 模型保存的位置
+    #     model_path = '../model/mnist/mnist_' + str(i) + '_hidden_layers_model.hdf5'
+    #     # attack_save_path = os.path.join(mnist_attack_data_base_path, 'mnist_attack_data/saliency_map/')
+    #     # attack_save_path = os.path.join(mnist_attack_data_base_path, 'mnist_attack_data/fgsm/')
+    #     # attack_save_path = os.path.join(mnist_attack_data_base_path, 'mnist_attack_data/gaussian_noise/')
+    #     attack_save_path = os.path.join(mnist_attack_data_base_path, 'mnist_attack_data/uniform_noise/')
+    #     for class_index in range(classes):
+    #         test_datas = data_provider.get_class_test_data('../data/mnist', 'mnist', class_index)
+    #         # test_labels = np.zeros(shape=(len(test_datas), classes))
+    #         # test_labels[:, class_index] = 1
+    #         process_attack(test_datas, class_index, model_path, attack_save_path)
+    #         # del test_labels
+    #         del test_datas
+    #         gc.collect()
+
+    # 模型保存的位置
+    model_path = '../model/mnist/lenet5.hdf5'
+    attack_save_path = os.path.join(mnist_attack_data_base_path, 'mnist_attack_data/saliency_map/')
+    # attack_save_path = os.path.join(mnist_attack_data_base_path, 'mnist_attack_data/fgsm/')
+    # attack_save_path = os.path.join(mnist_attack_data_base_path, 'mnist_attack_data/gaussian_noise/')
+    # attack_save_path = os.path.join(mnist_attack_data_base_path, 'mnist_attack_data/uniform_noise/')
+    for class_index in range(classes):
+        test_datas = data_provider.get_class_test_data('../data/mnist', 'mnist', class_index)
+        # test_labels = np.zeros(shape=(len(test_datas), classes))
+        # test_labels[:, class_index] = 1
+        test_datas = np.reshape(test_datas, (-1, 28, 28, 1))
+        process_attack_lenet5(test_datas, class_index, model_path, attack_save_path)
+        # del test_labels
+        del test_datas
+        gc.collect()

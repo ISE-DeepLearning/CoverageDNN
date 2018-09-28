@@ -14,6 +14,7 @@ from itertools import combinations, permutations
 目前只考虑1-1的三种情况的覆盖
 写尽可能考虑可拓展性
 '''
+batch_size = 30000
 
 
 def check_dir(dir_path):
@@ -91,8 +92,6 @@ def cal_2_to_10_value(datas):
 
 m = 1
 n = 1
-# 以0为激活的阈值
-threshold = 0
 # 数据集是mnist
 dataset = 'mnist'
 
@@ -100,6 +99,13 @@ dataset = 'mnist'
 # 1-输出端激活覆盖
 # 2-输入输出端均激活的覆盖
 type = 0
+
+# 上四分位
+percentitle = 25
+# 中位数
+# percentitle = 50
+# 下四分位
+# percentitle = 75
 
 if __name__ == '__main__':
     for layer_nums in [3, 5, 10]:
@@ -113,18 +119,21 @@ if __name__ == '__main__':
             layer2 = layer_num + 1
             datas1 = np.array([list(item) for item in right_datas[:, layer1]])
             datas2 = np.array([list(item) for item in right_datas[:, layer2]])
+            threshold1 = np.percentile(datas1, percentitle)
+            threshold2 = np.percentile(datas2, percentitle)
             print(datas1.shape)
             print(datas2.shape)
-            datas1[datas1 > threshold] = 1
-            datas2[datas2 > threshold] = 1
-            datas1[datas1 <= threshold] = 0
-            datas2[datas2 <= threshold] = 0
+            datas1[datas1 > threshold1] = 1
+            datas2[datas2 > threshold2] = 1
+            datas1[datas1 <= threshold1] = 0
+            datas2[datas2 <= threshold2] = 0
             process_data_for_right = process_two_layer(m, n, datas1, datas2, type)
             result_for_right = np.hstack((result_for_right, process_data_for_right))
         # process结束后
         # 保存激活数据信息
         print(result_for_right.shape)
-        save_path = '../data/mnist/mnist_right_active_data/coverage/threshold' + str(threshold) + '/adjacent_' + str(
+        save_path = '../data/mnist/mnist_right_active_data/coverage/percentile' + str(
+            percentitle) + '/adjacent_' + str(
             m) + '_' + str(n) + '/type' + str(type)
         check_dir(save_path)
         np.save(os.path.join(save_path, str(layer_nums) + '_hidden_layers_coverage.npy'), result_for_right)
@@ -142,19 +151,21 @@ if __name__ == '__main__':
                 layer2 = layer_num + 1
                 datas1 = np.array([list(item) for item in wrong_datas[:, layer1]])
                 datas2 = np.array([list(item) for item in wrong_datas[:, layer2]])
+                threshold1 = np.percentile(datas1, percentitle)
+                threshold2 = np.percentile(datas2, percentitle)
                 print(datas1.shape)
                 print(datas2.shape)
-                datas1[datas1 > threshold] = 1
-                datas2[datas2 > threshold] = 1
-                datas1[datas1 <= threshold] = 0
-                datas2[datas2 <= threshold] = 0
+                datas1[datas1 > threshold1] = 1
+                datas2[datas2 > threshold2] = 1
+                datas1[datas1 <= threshold1] = 0
+                datas2[datas2 <= threshold2] = 0
                 process_data_for_wrong = process_two_layer(m, n, datas1, datas2, type)
                 result_for_wrong = np.hstack((result_for_wrong, process_data_for_wrong))
             # process结束后
             # 保存激活数据的信息
             print(result_for_wrong.shape)
-            save_path = '../data/mnist/mnist_wrong_active_data/coverage/' + attack_type + '/threshold' + str(
-                threshold) + '/adjacent_' + str(m) + '_' + str(n) + '/type' + str(type)
+            save_path = '../data/mnist/mnist_wrong_active_data/coverage/' + attack_type + '/percentile' + str(
+                percentitle) + '/adjacent_' + str(m) + '_' + str(n) + '/type' + str(type)
             check_dir(save_path)
             np.save(os.path.join(save_path, str(layer_nums) + '_hidden_layers_coverage.npy'), result_for_wrong)
             del wrong_datas

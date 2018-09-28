@@ -43,8 +43,8 @@ def cal_score(original_data, compose_data):
     # 28*28 / 32*32 维度 计算得分
     pixels = np.array(original_data).flatten().shape[0]
     for i in range(0, pixels):
-        x = (original_data.reshape(pixels)[i] * 255).astype(np.uint8)
-        y = (compose_data.reshape(pixels)[i] * 255).astype(np.uint8)
+        x = (original_data.reshape((pixels,))[i] * 255).astype(np.uint8)
+        y = (compose_data.reshape((pixels,))[i] * 255).astype(np.uint8)
         temp = (int(x) - int(y)) ** 2
         test_count = test_count + temp
     # print(test_count)

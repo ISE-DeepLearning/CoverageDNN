@@ -1,6 +1,7 @@
 import numpy as np
 import os
 import json
+import math
 from itertools import combinations, permutations
 import data_provider
 import random
@@ -107,30 +108,18 @@ def get_total_size(combine_nums, type, m, n):
         return combine_nums * (2 ** (m + n))
 
 
-def check_dir(dir_path):
-    if not os.path.exists(dir_path):
-        os.makedirs(dir_path)
-
-
 if __name__ == '__main__':
     threshold = 0
     m = 1
     n = 1
-    # 将几种阈值都尝试一遍
-    for threshold in [0, 0.25, 0.5, 0.75, 1.0]:
-        for type in [0, 1, 2]:
-            for layer_num in [3, 5, 10]:
-                result = {"model": str(layer_num) + '_hidden_layers_model.hdf5', "type": type, 'data_type': 'right'}
-                result_coverage_data = {}
-                result_process_data = {}
-                # 隔离出来的保存rq1的目录
-                result_path = '../result/rq1/right/' + str(layer_num) + '_hidden_layers_model/adjacent_' + str(
-                    m) + '_' + str(n) + '_threshold_' + str(threshold) + '/type' + str(type)
-                check_dir(result_path)
+    for type in [0, 1, 2]:
+        for layer_num in [3, 5, 10]:
+            for attack_type in ['fgsm', 'gaussian_noise', 'saliency_map', 'uniform_noise']:
                 now = time.time()
-                print(str(layer_num) + ' hidden layers model process type' + str(type) + '...right...')
+                print(str(layer_num) + ' hidden layers model process type' + str(type) + '...all...' + attack_type)
                 plt.figure
-                datas = data_provider.get_right_active_data('../data/mnist/', 'mnist', layer_num)
+                datas = data_provider.get_all_active_data_with_attack_type('../data/mnist/', 'mnist', layer_num,
+                                                                           type=attack_type)
                 datas = data_provider.shuffle_mnist_data(datas)
                 total_data = []
                 process_data = []
@@ -144,8 +133,6 @@ if __name__ == '__main__':
                     datas2[datas2 > threshold] = 1
                     datas1[datas1 <= threshold] = 0
                     datas2[datas2 <= threshold] = 0
-                    # print(datas1.shape)
-                    # print(datas2.shape)
                     total_comb_num, coverage_data = two_layer(m, n, datas1, datas2, type=type)
                     total_size = get_total_size(total_comb_num, type, m, n)
                     total_data.append(total_size)
@@ -155,20 +142,15 @@ if __name__ == '__main__':
                     coverage_rate = coverage_data / total_size
                     plt.plot(range(1, len(datas) + 1), coverage_data / total_size, label=str(j) + '_' + str(j + 1))
                     print('第' + str(j) + '-' + str(j + 1) + '层最终覆盖率:' + str(coverage_rate[-1]))
-                    result_coverage_data[str(j) + '_' + str(j + 1)] = coverage_rate[-1]
-                    result_process_data[str(j) + '_' + str(j + 1)] = coverage_rate.tolist()
                     del datas1
                     del datas2
                     gc.collect()
                 total_rate = np.sum(process_data, axis=0) / np.sum(total_data)
                 plt.plot(range(1, len(datas) + 1), total_rate, label='total')
                 print('综合的边覆盖是:' + str(total_rate[-1]))
-                result_coverage_data['total'] = total_rate[-1]
-                result_process_data['total'] = total_rate.tolist()
-                result['coverage_result'] = result_coverage_data
                 # 过程数据 两千列, layer数据 目前是相邻两层 , total_data在这两层对应的覆盖情况总数
                 data_path = '../data/mnist/coverage/' + 'adjacent_' + str(
-                    m) + '_threshold' + str(threshold) + str(n) + '/type' + str(type) + '/right/'
+                    m) + '_' + str(n) + '/type' + str(type) + '/all/' + attack_type
                 if not os.path.exists(data_path):
                     os.makedirs(data_path)
                 np.save(os.path.join(data_path, str(layer_num) + '_hidden_layers_coverage_data.npy'),
@@ -176,16 +158,10 @@ if __name__ == '__main__':
                 # 消耗的时间
                 print(str(time.time() - now) + ' s')
                 plt.legend(loc='best')
-                plt.savefig(os.path.join(data_path, str(layer_num) + '_hidden_layer_mnist_model_for_right.jpg'))
-                plt.savefig(os.path.join(result_path, str(layer_num) + '_hidden_layer_mnist_model_for_right.jpg'))
+                plt.savefig(os.path.join(data_path, str(layer_num) + '_hidden_layer_mnist_model_for_all.jpg'))
                 plt.ion()
-                # plt.pause(1)
                 plt.close()
                 del datas
                 del process_data
                 del total_data
                 gc.collect()
-                with open(os.path.join(result_path, 'result.json'), 'w') as file:
-                    json.dump(result, file)
-                with open(os.path.join(result_path, 'process.json'), 'w') as file:
-                    json.dump(result_process_data, file)

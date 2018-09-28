@@ -102,60 +102,66 @@ dataset = 'mnist'
 type = 0
 
 if __name__ == '__main__':
-    for layer_nums in [3, 5, 10]:
-        now = time.time()
-        right_datas = data_provider.get_right_active_data('../data/mnist', dataset, layer_nums)
-        # process_right_datas and save coverage data
-        # 默认我们用相邻两层
-        result_for_right = np.empty((len(right_datas), 0))
-        for layer_num in range(layer_nums - 1):
-            layer1 = layer_num
-            layer2 = layer_num + 1
-            datas1 = np.array([list(item) for item in right_datas[:, layer1]])
-            datas2 = np.array([list(item) for item in right_datas[:, layer2]])
-            print(datas1.shape)
-            print(datas2.shape)
-            datas1[datas1 > threshold] = 1
-            datas2[datas2 > threshold] = 1
-            datas1[datas1 <= threshold] = 0
-            datas2[datas2 <= threshold] = 0
-            process_data_for_right = process_two_layer(m, n, datas1, datas2, type)
-            result_for_right = np.hstack((result_for_right, process_data_for_right))
-        # process结束后
-        # 保存激活数据信息
-        print(result_for_right.shape)
-        save_path = '../data/mnist/mnist_right_active_data/coverage/threshold' + str(threshold) + '/adjacent_' + str(
-            m) + '_' + str(n) + '/type' + str(type)
-        check_dir(save_path)
-        np.save(os.path.join(save_path, str(layer_nums) + '_hidden_layers_coverage.npy'), result_for_right)
-        del right_datas
-        gc.collect()
-        # 错误数据的激活信息保存
-        for attack_type in ['fgsm', 'gaussian_noise', 'saliency_map', 'uniform_noise']:
-            wrong_datas = data_provider.get_wrong_active_data_with_attack_type('../data/mnist', dataset, layer_nums,
-                                                                               attack_type)
-            # process_wrong_datas and save coverage data
+    for threshold in [0, 0.25, 0.5, 0.75, 1]:
+        for type in [0, 1, 2]:
+            now = time.time()
+            right_datas = np.load('../data/mnist/mnist_right_active_data/lenet5_active_data.npy')
+            layer_nums = 4
+            # process_right_datas and save coverage data
             # 默认我们用相邻两层
-            result_for_wrong = np.empty((len(wrong_datas), 0))
+            result_for_right = np.empty((len(right_datas), 0))
             for layer_num in range(layer_nums - 1):
                 layer1 = layer_num
                 layer2 = layer_num + 1
-                datas1 = np.array([list(item) for item in wrong_datas[:, layer1]])
-                datas2 = np.array([list(item) for item in wrong_datas[:, layer2]])
+                datas1 = np.array([list(item) for item in right_datas[:, layer1]])
+                datas2 = np.array([list(item) for item in right_datas[:, layer2]])
                 print(datas1.shape)
                 print(datas2.shape)
                 datas1[datas1 > threshold] = 1
                 datas2[datas2 > threshold] = 1
                 datas1[datas1 <= threshold] = 0
                 datas2[datas2 <= threshold] = 0
-                process_data_for_wrong = process_two_layer(m, n, datas1, datas2, type)
-                result_for_wrong = np.hstack((result_for_wrong, process_data_for_wrong))
+                process_data_for_right = process_two_layer(m, n, datas1, datas2, type)
+                result_for_right = np.hstack((result_for_right, process_data_for_right))
             # process结束后
-            # 保存激活数据的信息
-            print(result_for_wrong.shape)
-            save_path = '../data/mnist/mnist_wrong_active_data/coverage/' + attack_type + '/threshold' + str(
-                threshold) + '/adjacent_' + str(m) + '_' + str(n) + '/type' + str(type)
+            # 保存激活数据信息
+            print(result_for_right.shape)
+            save_path = '../data/mnist/mnist_right_active_data/coverage/threshold' + str(
+                threshold) + '/adjacent_' + str(
+                m) + '_' + str(n) + '/type' + str(type)
             check_dir(save_path)
-            np.save(os.path.join(save_path, str(layer_nums) + '_hidden_layers_coverage.npy'), result_for_wrong)
-            del wrong_datas
+            np.save(os.path.join(save_path, 'lenet5_coverage.npy'), result_for_right)
+            del right_datas
+            del result_for_right
+
             gc.collect()
+            # 错误数据的激活信息保存
+            for attack_type in ['fgsm', 'gaussian_noise', 'saliency_map', 'uniform_noise']:
+                wrong_datas = np.load(
+                    '../data/mnist/mnist_wrong_active_data/' + attack_type + '/lenet5_active_data.npy')
+                # process_wrong_datas and save coverage data
+                # 默认我们用相邻两层
+                result_for_wrong = np.empty((len(wrong_datas), 0))
+                for layer_num in range(layer_nums - 1):
+                    layer1 = layer_num
+                    layer2 = layer_num + 1
+                    datas1 = np.array([list(item) for item in wrong_datas[:, layer1]])
+                    datas2 = np.array([list(item) for item in wrong_datas[:, layer2]])
+                    print(datas1.shape)
+                    print(datas2.shape)
+                    datas1[datas1 > threshold] = 1
+                    datas2[datas2 > threshold] = 1
+                    datas1[datas1 <= threshold] = 0
+                    datas2[datas2 <= threshold] = 0
+                    process_data_for_wrong = process_two_layer(m, n, datas1, datas2, type)
+                    result_for_wrong = np.hstack((result_for_wrong, process_data_for_wrong))
+                # process结束后
+                # 保存激活数据的信息
+                print(result_for_wrong.shape)
+                save_path = '../data/mnist/mnist_wrong_active_data/coverage/' + attack_type + '/threshold' + str(
+                    threshold) + '/adjacent_' + str(m) + '_' + str(n) + '/type' + str(type)
+                check_dir(save_path)
+                np.save(os.path.join(save_path, 'lenet5_coverage.npy'), result_for_wrong)
+                del wrong_datas
+                del result_for_wrong
+                gc.collect()
